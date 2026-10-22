@@ -18,14 +18,19 @@ export class PlanetGame extends Component {
   @property(Prefab) plantVisual: Prefab | null = null;
   @property(Prefab) stoolVisual: Prefab | null = null;
   @property(Prefab) tableVisual: Prefab | null = null;
-  private net = new PlanetConnection();
+  // Creator may instantiate components while inspecting/deserializing a scene.
+  // Browser/network state belongs to the play lifecycle, not the component constructor.
+  private net!: PlanetConnection;
+  private disposed = false;
   private canvas!: Node;
   private room!: Node;
   private worldView!: WorldView;
+  private uiCamera!: Camera;
   private status!: Label;
   private hint!: Label;
   private notes!: Label;
   private loginPanel: Node | null = null;
+  private notesPanel: Node | null = null;
   private mode: Mode = 'walk';
   private selected: string | undefined;
   private target: Point | null = null;
@@ -40,6 +45,7 @@ export class PlanetGame extends Component {
     const cameraNode = this.nodeOf('Camera', this.canvas, 0, 0, 0, 0);
     cameraNode.setPosition(0, 0, 1000);
     const camera = cameraNode.addComponent(Camera);
+    this.uiCamera = camera;
     camera.projection = Camera.ProjectionType.ORTHO;
     camera.orthoHeight = 422;
     camera.near = 0.1; camera.far = 2000;
@@ -78,10 +84,13 @@ export class PlanetGame extends Component {
       if (input.string.trim() && this.net.send({ type: 'note', text: input.string })) input.string = '';
     });
     this.notes = this.text('小屋留言会一直等你回来', this.canvas, 0, -376, 13, '#755664', 360, 68);
-    this.net.onStatus = value => { this.status.string = value; };
-    this.net.onState = () => this.sync();
-    this.net.onHug = () => { this.heart = 2; this.status.string = '抱抱，今天也很想你'; };
-    void this.net.resume().then(ok => { if (!ok) this.showLogin(); });
+    this.net = new PlanetConnection();
+    this.net.onStatus = value => { if (!this.disposed) this.status.string = value; };
+    this.net.onState = () => { if (!this.disposed) this.sync(); };
+    this.net.onHug = () => {
+      if (!this.disposed) { this.heart = 2; this.status.string = '抱抱，今天也很想你'; }
+    };
+    void this.net.resume().then(ok => { if (!this.disposed && !ok) this.showLogin(); });
     this.draw();
   }
 
@@ -109,15 +118,24 @@ export class PlanetGame extends Component {
   }
   private input(parent: Node, x: number, y: number, w: number, h: number, placeholder: string, secret: boolean): EditBox {
     const n = this.nodeOf('输入', parent, w, h, x, y);
-    const g = n.addComponent(Graphics);
-    g.fillColor = C('#fffaf3'); g.roundRect(-w / 2, -h / 2, w, h, 8); g.fill();
+    // EditBox.__preload creates labels and onEnable creates a Sprite on its own node.
+    // Configure while inactive; keep Graphics on a child so two UIRenderers cannot overwrite uiComp.
+    n.active = false;
+    const background = this.nodeOf('输入背景', n, w, h, 0, 0);
+    const g = background.addComponent(Graphics);
     const label = this.text('', n, 0, 0, 14, '#674d5e', w - 16, h);
     const hint = this.text(placeholder, n, 0, 0, 12, '#9f9292', w - 16, h);
+    for (const text of [label, hint]) {
+      text.node.getComponent(UITransform)!.setAnchorPoint(0, 1);
+      text.horizontalAlign = Label.HorizontalAlign.LEFT;
+    }
     const edit = n.addComponent(EditBox);
     edit.textLabel = label; edit.placeholderLabel = hint; edit.placeholder = placeholder;
     edit.inputMode = EditBox.InputMode.SINGLE_LINE;
     edit.inputFlag = secret ? EditBox.InputFlag.PASSWORD : EditBox.InputFlag.DEFAULT;
     edit.maxLength = 128;
+    n.active = true;
+    g.fillColor = C('#fffaf3'); g.roundRect(-w / 2, -h / 2, w, h, 8); g.fill();
     return edit;
   }
   private showLogin(): void {
@@ -136,8 +154,11 @@ export class PlanetGame extends Component {
         if (busy) return;
         busy = true; feedback.string = '正在配对…';
         void this.net.login(player, input.string.trim()).then(() => {
+          if (this.disposed || !panel.isValid) return;
           input.string = ''; panel.destroy(); this.loginPanel = null;
-        }).catch((e: Error) => { feedback.string = e.message; }).finally(() => { busy = false; });
+        }).catch((e: Error) => {
+          if (!this.disposed && panel.isValid) feedback.string = e.message;
+        }).finally(() => { busy = false; });
       });
     }
   }
@@ -148,8 +169,10 @@ export class PlanetGame extends Component {
       '还没有留言，给另一半写第一句话吧';
   }
   private showNotes(): void {
+    if (this.notesPanel) return;
+    this.target = null;
     const notes = this.net.state?.notes || [];
-    const panel = this.nodeOf('留言簿', this.canvas, 390, 844, 0, 0);
+    const panel = this.notesPanel = this.nodeOf('留言簿', this.canvas, 390, 844, 0, 0);
     const g = panel.addComponent(Graphics);
     g.fillColor = C('#f7f0e8'); g.rect(-195, -422, 390, 844); g.fill();
     panel.on(Node.EventType.TOUCH_END, (event: EventTouch) => { event.propagationStopped = true; });
@@ -165,13 +188,16 @@ export class PlanetGame extends Component {
     };
     this.button('上一条', panel, -95, -280, 115, 40, () => { index = Math.max(0, index - 1); render(); });
     this.button('下一条', panel, 95, -280, 115, 40, () => { index = Math.min(Math.max(0, notes.length - 1), index + 1); render(); });
-    this.button('回到小屋', panel, 0, -347, 180, 42, () => panel.destroy());
+    this.button('回到小屋', panel, 0, -347, 180, 42, () => { this.notesPanel = null; panel.destroy(); });
     render();
   }
   private touch(event: EventTouch): void {
-    if (this.loginPanel || !this.net.state || !this.net.player) return;
-    const p = event.getUILocation();
-    const local = this.room.getComponent(UITransform)!.convertToNodeSpaceAR(new Vec3(p.x, p.y));
+    if (this.loginPanel || this.notesPanel || !this.net.state || !this.net.player) return;
+    // Same conversion chain as Creator 3.8.8 UITransform.hitTest: screen -> camera world -> local.
+    // getUILocation() is not world space for this zero-centered Canvas/camera.
+    const p = event.getLocation();
+    const world = this.uiCamera.screenToWorld(new Vec3(p.x, p.y, 0), new Vec3());
+    const local = this.room.getComponent(UITransform)!.convertToNodeSpaceAR(world);
     const point = { x: Math.max(ROOM.minX, Math.min(ROOM.maxX, local.x)),
       y: Math.max(ROOM.minY, Math.min(ROOM.maxY, local.y)) };
     if (this.mode === 'walk') { this.target = point; return; }
@@ -209,5 +235,9 @@ export class PlanetGame extends Component {
     this.worldView.render({ state: this.net.state, positions: this.visual, online: this.net.online,
       localPlayer: this.net.player, selected: this.selected, hugLeft: this.heart });
   }
-  onDestroy(): void { this.net.dispose(); this.canvas?.destroy(); }
+  onDestroy(): void {
+    this.disposed = true;
+    this.net?.dispose();
+    this.canvas?.destroy();
+  }
 }

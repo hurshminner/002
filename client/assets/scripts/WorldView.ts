@@ -1,6 +1,7 @@
 import { _decorator, Color, Component, Graphics, Layers, Node, Prefab, UITransform,
   instantiate, warn } from 'cc';
 import { CharacterView, type Facing } from './CharacterView';
+import { compareFootDepth, motionFacing } from './CharacterPresentation';
 import { type Furniture, type FurnitureKind, type PlayerId, type Point, type World } from './shared/protocol';
 
 const { ccclass } = _decorator;
@@ -60,11 +61,11 @@ export class WorldView extends Component {
     for (const player of ['one', 'two'] as const) {
       const position = p.positions[player], previous = this.previous.get(player) ?? position;
       const dx = position.x - previous.x, dy = position.y - previous.y;
-      const moving = Math.hypot(dx, dy) > 0.02;
-      if (moving) this.facing[player] = Math.abs(dx) > Math.abs(dy) ? (dx < 0 ? 'left' : 'right') : (dy < 0 ? 'down' : 'up');
+      const motion = motionFacing(this.facing[player], dx, dy);
+      this.facing[player] = motion.facing;
       const view = this.characters.get(player)!;
       view.node.parent!.setPosition(position.x, position.y);
-      view.present({ player, position: { x: 0, y: 0 }, moving, hugging: p.hugLeft > 0,
+      view.present({ player, position: { x: 0, y: 0 }, moving: motion.moving, hugging: p.hugLeft > 0,
         online: p.online.includes(player), isSelf: p.localPlayer === player, facing: this.facing[player] });
       this.previous.set(player, { ...position });
     }
@@ -88,7 +89,8 @@ export class WorldView extends Component {
     for (const [id, entry] of this.furniture) if (!active.has(id)) {
       entry.node.destroy(); this.furniture.delete(id);
     }
-    this.entities.children.slice().sort((a, b) => b.position.y - a.position.y || a.name.localeCompare(b.name))
+    this.entities.children.slice().sort((a, b) => compareFootDepth(
+      { y: a.position.y, name: a.name }, { y: b.position.y, name: b.name }))
       .forEach((node, i) => node.setSiblingIndex(i));
     this.selection.clear();
     const selected = p.state?.furniture.find(f => f.id === p.selected);

@@ -10,7 +10,10 @@ export interface ConnectionRuntime {
 }
 export class PlanetConnection {
   constructor(private runtime: ConnectionRuntime = {
-    base: window.location.origin, storage: window.localStorage,
+    base: window.location.origin,
+    // Storage getters can throw in restricted browser contexts. Access inside the existing guards.
+    storage: { getItem: key => window.localStorage.getItem(key),
+      setItem: (key, value) => window.localStorage.setItem(key, value) },
     request: (...args) => fetch(...args), socket: url => new WebSocket(url),
   }) {}
   player: PlayerId | null = null;
@@ -37,9 +40,11 @@ export class PlanetConnection {
   async resume(): Promise<boolean> {
     try {
       const response = await this.runtime.request(`${this.base}/api/me`, { credentials: 'same-origin', cache: 'no-store' });
+      if (this.stopped) return false;
       if (response.status === 401) return false;
       if (!response.ok) throw new Error('服务器尚未就绪');
       const body = await response.json() as { player: PlayerId };
+      if (this.stopped) return false;
       this.player = body.player;
       this.loadOutbox();
       this.connect();
@@ -49,6 +54,7 @@ export class PlanetConnection {
   async login(player: PlayerId, code: string): Promise<void> {
     const response = await this.runtime.request(`${this.base}/api/login`, { method: 'POST', credentials: 'same-origin',
       headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ player, code }) });
+    if (this.stopped) return;
     if (!response.ok) throw new Error(response.status === 429 ? '尝试太频繁，请一分钟后重试' :
       response.status === 503 ? '服务器尚未配置配对凭证' : '配对凭证无效，或网站来源未配置');
     this.player = player;
@@ -89,7 +95,7 @@ export class PlanetConnection {
     }, 10_000);
     this.sent.clear();
     ws.onmessage = event => {
-      if (ws !== this.socket) return;
+      if (this.stopped || ws !== this.socket) return;
       let data: ServerEvent;
       try { data = JSON.parse(String(event.data)) as ServerEvent; } catch { return; }
       if (data.v !== 1) return;
@@ -193,9 +199,11 @@ export class PlanetConnection {
   }
   dispose(): void {
     this.stopped = true;
+    this.connected = false;
     if (this.retry) clearTimeout(this.retry);
     if (this.heartbeat) clearInterval(this.heartbeat);
     if (this.flushTimer) clearTimeout(this.flushTimer);
     this.socket?.close();
+    this.socket = null;
   }
 }

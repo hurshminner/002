@@ -7,9 +7,10 @@
 | 检查 | 内容 | 状态 |
 | --- | --- | --- |
 | `npm run check` | Worker、DO、共享协议的严格 TypeScript 检查 | 已通过 |
-| `npm run check:client` | 官方 Creator 3.8.8 类型声明、全部元数据／UUID、场景绑定／引用和竖屏配置 | 已通过；17 个资产／目录标识，3 个脚本组件；不含引擎运行 |
+| `npm run check:client` | 官方 Creator 3.8.8 类型声明、全部元数据／UUID、场景绑定／引用和竖屏配置 | 已通过；18 个资产／目录标识，3 个脚本组件；不含引擎运行 |
 | `npm run test:assets` | 工程副本的完整性检查及缺元数据、重复 UUID、错误绑定、缺失美术引用等拒绝测试 | 7/7 通过；与原 15 项集成测试分开计数 |
 | `npm test` | HTTP、实际 WebSocket 双连接、SQLite、真实运行时重启、客户端传输层、加密备份 | 15/15 通过；无跳过、失败或取消 |
+| `npm run test:client` | 四方向动画回退／同名资源别名、脚点排序、停止方向、延迟请求返回和受限存储 | 12/12 通过；不执行或模拟 Cocos 引擎 |
 | `wrangler deploy --dry-run` | Worker 本地生产打包与绑定配置解析 | 已通过；没有上传或部署 |
 | `wrangler pages functions build` | Pages API 代理编译 | 已通过；没有验证远程 Service Binding |
 
@@ -36,6 +37,8 @@
 定时 alarm 的 24 小时触发尚未等待观察；快照方法由管理接口调用并用真实 SQLite 验证。Pages 服务绑定的远程部署也尚未验证。
 
 本轮将原有绘图整理为 WorldView／CharacterView 并保留占位画面，原 15 个集成测试全部保留且修改后重跑通过。新增检查不包含任何模拟引擎绘制来冒充 Creator 测试的做法。Prefab／SpriteFrame／AnimationClip 接入仍需真实编辑器验证；当前六个美术接口都是空值，正式形象未导入。
+
+Phase 2 在上述显示层基础上修复触摸坐标、EditBox 渲染节点与标签初始化、销毁后的异步返回等源码风险，详见 `PHASE2.md`。本地 Windows 实际导入、输入、绘制和 Web Mobile 构建全部仍为未验证，后续以 `WINDOWS_PHASE2.md` 填写真实记录。
 
 ## 必须在编辑器与手机执行（全部待验证）
 
