@@ -1,0 +1,6 @@
+# Copy to .dev.vars for manual local development. Never commit real values.
+# Generate fresh values with npm run credentials (prints private credentials).
+PLAYER_ONE_HASH=REPLACE_WITH_SHA256_HEX
+PLAYER_TWO_HASH=REPLACE_WITH_SHA256_HEX
+SESSION_SECRET=REPLACE_WITH_64_HEX_CHARACTERS
+ADMIN_TOKEN_HASH=REPLACE_WITH_SHA256_HEX

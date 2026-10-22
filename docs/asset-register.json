@@ -1,0 +1,24 @@
+{
+  "schema": 1,
+  "project": "余野和禾柚的小世界",
+  "stage": "functional-prototype",
+  "runtime_configuration": false,
+  "slots": {
+    "one": { "character": null, "prefab": null },
+    "two": { "character": null, "prefab": null }
+  },
+  "characters": {
+    "yuye": {
+      "name": "余野",
+      "reference_status": "awaiting-user-reference",
+      "approved_appearance": null,
+      "files": []
+    },
+    "heyou": {
+      "name": "禾柚",
+      "reference_status": "awaiting-user-reference",
+      "approved_appearance": null,
+      "files": []
+    }
+  }
+}

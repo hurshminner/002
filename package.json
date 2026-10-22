@@ -1,0 +1,28 @@
+{
+  "name": "our-private-planet",
+  "version": "0.1.0",
+  "private": true,
+  "type": "module",
+  "engines": {
+    "node": ">=22"
+  },
+  "scripts": {
+    "dev:server": "wrangler dev --local --ip 127.0.0.1 --port 8787",
+    "dev:gateway": "node scripts/dev-gateway.mjs",
+    "check": "tsc --noEmit",
+    "test": "node --test tests/integration.test.mjs",
+    "test:assets": "node --test tests/client-assets.test.mjs",
+    "check:client": "node scripts/check-client.mjs",
+    "credentials": "node scripts/credentials.mjs",
+    "backup": "node scripts/backup.mjs",
+    "deploy:server": "wrangler deploy",
+    "deploy:client": "node scripts/deploy-client.mjs"
+  },
+  "devDependencies": {
+    "@cloudflare/workers-types": "5.20261022.1",
+    "@cocos/creator-types": "3.8.8",
+    "typescript": "5.9.3",
+    "wrangler": "4.151.3",
+    "ws": "8.18.3"
+  }
+}

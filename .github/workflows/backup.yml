@@ -1,0 +1,28 @@
+name: Encrypted private planet backup
+on:
+  workflow_dispatch:
+  schedule:
+    - cron: '0 11 * * *'
+permissions:
+  contents: read
+jobs:
+  backup:
+    if: ${{ vars.PLANET_URL != '' }}
+    runs-on: ubuntu-latest
+    timeout-minutes: 5
+    env:
+      PLANET_URL: ${{ vars.PLANET_URL }}
+      PLANET_ADMIN_TOKEN: ${{ secrets.PLANET_ADMIN_TOKEN }}
+      PLANET_BACKUP_KEY: ${{ secrets.PLANET_BACKUP_KEY }}
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: '24'
+      - run: node scripts/backup.mjs export backups/home.planet
+      - uses: actions/upload-artifact@v4
+        with:
+          name: encrypted-home-${{ github.run_id }}
+          path: backups/home.planet
+          retention-days: 30
+          if-no-files-found: error

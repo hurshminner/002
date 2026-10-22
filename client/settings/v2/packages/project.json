@@ -1,0 +1,14 @@
+{
+  "__version__": "1.0.4",
+  "general": {
+    "designResolution": {
+      "width": 390,
+      "height": 844,
+      "fitWidth": true,
+      "fitHeight": true
+    }
+  },
+  "script": {
+    "useDefineForClassFields": false
+  }
+}

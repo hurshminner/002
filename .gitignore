@@ -1,0 +1,14 @@
+node_modules/
+.wrangler/
+.dev.vars
+.dev.vars.*
+!.dev.vars.example
+client/library/
+client/temp/
+client/local/
+client/build/
+client/profiles/
+backups/
+test-results/
+*.log
+.DS_Store
