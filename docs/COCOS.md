@@ -1,5 +1,7 @@
 # 本地 Creator 3.8.8 导入与预览
 
+Phase 2 的 Windows PowerShell 完整流程、真实构建产物本地运行步骤，以及本轮修复的人工验收点，见 [Windows Phase 2 手册](WINDOWS_PHASE2.md)。运行边界与源码证据见 [Phase 2 检查](PHASE2.md)。
+
 本工程是《余野和禾柚的小世界》的第一阶段功能原型，**两名角色均为占位角色**。以下步骤需要在本地实际执行；当前云环境没有 Creator 编辑器，不能预先将它们标为通过。
 
 ## 1. 获取工程与安装工具
@@ -15,6 +17,7 @@ npm ci --ignore-scripts
 npm run check
 npm run check:client
 npm run test:assets
+npm run test:client
 npm test
 ```
 

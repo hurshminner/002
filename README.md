@@ -35,6 +35,7 @@ npm ci --ignore-scripts
 npm run check
 npm run check:client
 npm run test:assets
+npm run test:client
 npm test
 ```
 
@@ -59,5 +60,7 @@ npm test
 - [自动检查与待执行的双机验收](docs/VALIDATION.md)
 - [本轮完整性审查与阻塞清单](docs/AUDIT.md)
 - [角色与场景素材接入规范](docs/ASSETS.md)
+- [Phase 2 运行风险与验收边界](docs/PHASE2.md)
+- [Windows 导入、预览与 Web Mobile 本地构建](docs/WINDOWS_PHASE2.md)
 
 代码由 Git 管理，CI 随 push／PR 运行。GitHub 推送结果以本轮交付报告及远端提交为准；生产部署仍需真实构建与账号配置。自动 CI 不安装编辑器，也不会把类型检查报告成 Web Mobile 构建成功。

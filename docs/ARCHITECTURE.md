@@ -6,7 +6,7 @@
 
 `PlanetGame` 保留输入、联网和移动请求；`WorldView` 接收快照／插值位置，仅维护角色、家具和背景显示；`CharacterView` 选择 SpriteFrame／idle、walk、hug 动画。六个可选 Prefab 字段在 Home 的 Bootstrap/PlanetGame 上配置，当前均为空，继续回退到原占位画面。
 
-人物外观与场景资源 UUID 不进入服务器存档；角色贴图尺寸、Visual 子节点动画、Prefab 变化不能决定玩家身份、坐标、速度或拥抱距离。后续接入正式美术无需改动协议和权威存档。四方向或骨骼动画需要单独的显示适配，不表示已经实现或验收，见 `ASSETS.md`。
+人物外观与场景资源 UUID 不进入服务器存档；角色贴图尺寸、Visual 子节点动画、Prefab 变化不能决定玩家身份、坐标、速度或拥抱距离。Phase 2 增加可选四方向 idle／walk 字段与通用动画回退，选择逻辑可独立测试，实际 Animation 播放尚未在编辑器验证；骨骼动画仍需单独的显示适配。后续接入正式二维美术无需改动协议和权威存档，见 `ASSETS.md`。
 
 ## 权威与身份
 

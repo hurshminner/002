@@ -18,4 +18,5 @@ jobs:
       - run: npm run check
       - run: npm run check:client
       - run: npm run test:assets
+      - run: npm run test:client
       - run: npm test

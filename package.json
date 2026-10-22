@@ -12,6 +12,7 @@
     "check": "tsc --noEmit",
     "test": "node --test tests/integration.test.mjs",
     "test:assets": "node --test tests/client-assets.test.mjs",
+    "test:client": "node --test tests/client-runtime.test.mjs",
     "check:client": "node scripts/check-client.mjs",
     "credentials": "node scripts/credentials.mjs",
     "backup": "node scripts/backup.mjs",

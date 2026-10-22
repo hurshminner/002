@@ -1,11 +1,12 @@
 import { _decorator, Animation, AnimationClip, Color, Component, Graphics, Node,
   Sprite, SpriteFrame, UIOpacity, UITransform, warn } from 'cc';
 import { type PlayerId, type Point } from './shared/protocol';
+import { selectClipBinding, type CharacterClips, type CharacterPhase, type ClipBinding,
+  type Facing } from './CharacterPresentation';
+export type { CharacterPhase, Facing } from './CharacterPresentation';
 
 const { ccclass, property } = _decorator;
 const color = (hex: string) => new Color().fromHEX(hex);
-export type CharacterPhase = 'idle' | 'walk' | 'hug';
-export type Facing = 'up' | 'down' | 'left' | 'right';
 export interface CharacterPose {
   player: PlayerId;
   position: Point;
@@ -31,13 +32,22 @@ export class CharacterView extends Component {
   @property(AnimationClip) idleClip: AnimationClip | null = null;
   @property(AnimationClip) walkClip: AnimationClip | null = null;
   @property(AnimationClip) hugClip: AnimationClip | null = null;
+  @property(AnimationClip) idleUpClip: AnimationClip | null = null;
+  @property(AnimationClip) idleDownClip: AnimationClip | null = null;
+  @property(AnimationClip) idleLeftClip: AnimationClip | null = null;
+  @property(AnimationClip) idleRightClip: AnimationClip | null = null;
+  @property(AnimationClip) walkUpClip: AnimationClip | null = null;
+  @property(AnimationClip) walkDownClip: AnimationClip | null = null;
+  @property(AnimationClip) walkLeftClip: AnimationClip | null = null;
+  @property(AnimationClip) walkRightClip: AnimationClip | null = null;
   @property({ min: 0, tooltip: '本机角色标记高度，可随正式素材调整；不影响玩法坐标。' })
   markerHeight = 61;
 
   private placeholder!: Graphics;
   private marker!: Graphics;
   private opacity!: UIOpacity;
-  private playing: AnimationClip | null = null;
+  private playing: ClipBinding | null = null;
+  private clips!: CharacterClips<AnimationClip>;
   private initialized = false;
 
   initialize(): void {
@@ -54,16 +64,21 @@ export class CharacterView extends Component {
     marker.addComponent(UITransform).setContentSize(8, 8);
     this.marker = marker.addComponent(Graphics);
     if (this.body && this.idleFrame) this.body.spriteFrame = this.idleFrame;
+    this.clips = {
+      idleClip: this.idleClip, walkClip: this.walkClip, hugClip: this.hugClip,
+      idleUpClip: this.idleUpClip, idleDownClip: this.idleDownClip,
+      idleLeftClip: this.idleLeftClip, idleRightClip: this.idleRightClip,
+      walkUpClip: this.walkUpClip, walkDownClip: this.walkDownClip,
+      walkLeftClip: this.walkLeftClip, walkRightClip: this.walkRightClip,
+    };
     if (this.animator) {
-      const names = new Set<string>();
-      for (const clip of [this.idleClip, this.walkClip, this.hugClip]) {
+      this.animator.playOnLoad = false;
+      for (const [binding, clip] of Object.entries(this.clips)) {
         if (!clip) continue;
-        if (names.has(clip.name)) {
-          warn('CharacterView: animation clip names must be unique; check art bindings.'); continue;
-        }
-        names.add(clip.name); this.animator.addClip(clip);
+        // Different imported clips can have identical .name values. Alias by slot, not by .name.
+        this.animator.addClip(clip, binding);
       }
-    } else if (this.idleClip || this.walkClip || this.hugClip) {
+    } else if (Object.values(this.clips).some(Boolean)) {
       warn('CharacterView: clips are assigned without an Animation component.');
     }
     if (this.idleFrame && !this.body) warn('CharacterView: idleFrame needs a bound Sprite component.');
@@ -74,17 +89,17 @@ export class CharacterView extends Component {
     // The logical origin is the ground/feet pivot. Art size never changes movement or interaction range.
     this.node.setPosition(pose.position.x, pose.position.y);
     this.opacity.opacity = pose.online ? 255 : 150;
-    const hasArt = !!this.body?.spriteFrame || !!(this.animator && (this.idleClip || this.walkClip || this.hugClip));
+    const phase: CharacterPhase = pose.hugging ? 'hug' : pose.moving ? 'walk' : 'idle';
+    const binding = selectClipBinding(this.clips, phase, pose.facing);
+    const hasArt = !!this.body?.spriteFrame || !!(this.animator && binding);
     this.placeholder.node.active = !hasArt;
     if (!hasArt) this.drawPlaceholder(pose.player, pose.online);
-    const phase: CharacterPhase = pose.hugging ? 'hug' : pose.moving ? 'walk' : 'idle';
-    const clip = (phase === 'hug' ? this.hugClip : phase === 'walk' ? this.walkClip : this.idleClip) ?? this.idleClip;
-    if (clip !== this.playing) {
-      this.animator?.stop(); this.playing = clip;
-      if (clip && this.animator) this.animator.play(clip.name);
+    if (binding !== this.playing) {
+      this.animator?.stop(); this.playing = binding;
+      if (binding && this.animator) this.animator.play(binding);
       else if (this.body && this.idleFrame) this.body.spriteFrame = this.idleFrame;
     }
-    // facing is supplied for future directional art; no mirroring or appearance is guessed here.
+    // Direction selects supplied clips only; no mirroring or appearance is generated here.
     const g = this.marker; g.clear();
     if (pose.isSelf) { g.fillColor = color('#c68aa2'); g.circle(0, this.markerHeight, 3); g.fill(); }
   }
